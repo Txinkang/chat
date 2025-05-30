@@ -3,6 +3,7 @@ package initialize
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -10,8 +11,9 @@ import (
 var RedisClient *redis.Client
 
 func InitRedis() error {
-	redisConfig := AppConfig.Redis // 假设你已经反序列化到 AppConfig.Redis
+	slog.Info("初始化redis")
 
+	redisConfig := AppConfig.Redis // 假设你已经反序列化到 AppConfig.Redis
 	RedisClient = redis.NewClient(&redis.Options{
 		Addr:     redisConfig.Address,
 		Username: redisConfig.Username,
@@ -25,6 +27,6 @@ func InitRedis() error {
 		return fmt.Errorf("Redis 连接失败: %w", err)
 	}
 
-	fmt.Println("✅ Redis 连接成功")
+	slog.Info("Redis 连接成功")
 	return nil
 }

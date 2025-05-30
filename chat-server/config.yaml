@@ -10,7 +10,7 @@ mysql:
   charset: utf8mb4
 
 mongo:
-  uri: mongodb+srv://root:root@chat-mongo.rimufll.mongodb.net/?retryWrites=true&w=majority&appName=chat-mongo
+  uri: 666mongodb+srv://root:root@chat-mongo.rimufll.mongodb.net/?retryWrites=true&w=majority&appName=chat-mongo
   dbname: chat
 
 elasticsearch:
@@ -23,3 +23,9 @@ redis:
   username: "root"
   password: "root"         
   db: 0
+
+logger:
+  level: info
+  output: stdout
+  format: json
+  source_path: true

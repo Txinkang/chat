@@ -6,4 +6,5 @@ type AppConfig struct {
 	Mongo         Mongo         `mapstructure:"mongo" yaml:"mongo"`
 	ElasticSearch ElasticSearch `mapstructure:"elasticsearch" yaml:"elasticsearch"`
 	Redis         Redis         `mapstructure:"redis" yaml:"redis"`
+	Logger        Logger        `mapstructure:"logger" yaml:"logger"`
 }

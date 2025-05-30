@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v9"
+	"log/slog"
 	"time"
 )
 
 var EsClient *elasticsearch.Client
 
 func InitElasticSearch() error {
+	slog.Info("初始化elasticsearch")
 	EsConfig := AppConfig.ElasticSearch
 
 	cfg := elasticsearch.Config{
@@ -42,6 +44,6 @@ func InitElasticSearch() error {
 		return fmt.Errorf("Elasticsearch 返回错误: %s", res.String())
 	}
 	EsClient = client
-	fmt.Println("✅ Elasticsearch 连接成功")
+	slog.Info("Elasticsearch连接成功")
 	return nil
 }

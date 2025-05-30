@@ -5,11 +5,13 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"log/slog"
 )
 
 var MysqlDB *gorm.DB
 
 func InitMySQL() error {
+	slog.Info("初始化mysql")
 	// 获取反序列化后的mysql
 	mysqlConfig := AppConfig.Mysql
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
@@ -23,7 +25,6 @@ func InitMySQL() error {
 	if err != nil {
 		return fmt.Errorf("mysql连接失败: %w", err)
 	}
-
-	fmt.Println("✅ mysql连接成功")
+	slog.Info("mysql连接成功")
 	return nil
 }

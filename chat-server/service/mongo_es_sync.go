@@ -63,7 +63,7 @@ func StartMongoToEsSync(ctx context.Context, mongoDB *mongo.Database, esClient *
 			var id string
 			// 尝试断言为 bson.ObjectID
 			if mongoID, ok := docMap["_id"].(bson.ObjectID); ok {
-				id = mongoID.Hex()                                      // 使用 Hex() 方法获取十六进制字符串
+				id = mongoID.Hex()                         // 使用 Hex() 方法获取十六进制字符串
 				log.Printf("成功将 _id 转换为十六进制字符串: %s\n", id) // 添加日志确认
 			} else {
 				// 如果 _id 不是 bson.ObjectID 类型，则回退到通用字符串格式化

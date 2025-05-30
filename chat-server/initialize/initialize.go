@@ -1,17 +1,13 @@
 package initialize
 
-import (
-	"chat-server/service"
-	"context"
-)
-
 func Initialize() error {
 	InitConfig()
-	//InitMySQL()
+	InitLogger()
+	InitMySQL()
 	InitMongo()
-	InitElasticSearch()
+	//InitElasticSearch()
 	//InitRedis()
 
-	service.StartMongoToEsSync(context.Background(), MongoDB, EsClient, "messages", "messages")
+	//service.StartMongoToEsSync(context.Background(), MongoDB, EsClient, "messages", "messages")
 	return nil
 }
