@@ -1,6 +1,7 @@
 package initialize
 
 import (
+	"chat-server/global"
 	"fmt"
 	"log/slog"
 	"os"
@@ -8,7 +9,7 @@ import (
 
 func InitLogger() error {
 	fmt.Println("开始初始化日志功能")
-	loggerConfig := AppConfig.Logger
+	loggerConfig := global.CHAT_CONFIG.Logger
 
 	// 1、设置日志级别
 	var level slog.Level

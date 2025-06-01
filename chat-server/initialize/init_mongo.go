@@ -1,33 +1,46 @@
 package initialize
 
 import (
+	"chat-server/global"
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 	"log/slog"
+	"time"
 )
-
-var MongoClient *mongo.Client
-var MongoDB *mongo.Database
 
 func InitMongo() error {
 	slog.Info("初始化mongo")
-	mongoConfig := AppConfig.Mongo
+	mongoConfig := global.CHAT_CONFIG.Mongo
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	clientOpts := options.Client().ApplyURI(mongoConfig.URI).SetServerAPIOptions(serverAPI)
+	clientOpts := options.Client().ApplyURI(mongoConfig.URI).SetServerAPIOptions(serverAPI).
+		SetMinPoolSize(mongoConfig.MinPoolSize).                                     // 最小连接数
+		SetMaxPoolSize(mongoConfig.MaxPoolSize).                                     // 最大连接数
+		SetConnectTimeout(time.Duration(mongoConfig.ConnectTimeout) * time.Second).  // 连接超时时间
+		SetMaxConnIdleTime(time.Duration(mongoConfig.MaxConnIdleTime) * time.Second) // 连接最大空闲时间
 
 	client, err := mongo.Connect(clientOpts)
 	if err != nil {
-		return fmt.Errorf("连接mongoDB失败: %v", err)
+		slog.Error("连接 MongoDB 失败: ", "err", err)
+		return err
 	}
 
-	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
-		return fmt.Errorf("mongoDB Ping 失败: %v", err)
+	// 检查连接
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(mongoConfig.ConnectTimeout)*time.Second)
+	defer cancel()
+	if err = client.Ping(ctx, nil); err != nil {
+		slog.Error("Ping MongoDB 失败", "err", err)
+		disconnectCtx, disconnectCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer disconnectCancel()
+		closeErr := client.Disconnect(disconnectCtx)
+		if closeErr != nil {
+			slog.Error("Ping MongoDB 失败后，关闭 MongoDB 失败: ", "err", closeErr)
+		}
+		return err
 	}
-	MongoClient = client
-	MongoDB = client.Database(mongoConfig.DBName)
+
+	global.CHAT_MONGO = client
+	global.CHAT_MONGODB = client.Database(mongoConfig.DBName)
 	slog.Info("MongoDB连接成功")
 	return nil
 }

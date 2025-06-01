@@ -1,54 +1,50 @@
 package service
 
 import (
+	"chat-server/global"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/elastic/go-elasticsearch/v9"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"log/slog"
 
-	"log"
 	"strings"
 )
 
-func StartMongoToEsSync(ctx context.Context, mongoDB *mongo.Database, esClient *elasticsearch.Client, collectionName, esIndex string) error {
-	//mongoDB := initialize.MongoDB   // 你在初始化时保存的 *mongo.Database
-	//esClient := initialize.EsClient // 你在初始化时保存的 *elasticsearch.Client
+func StartMongoToEsSync(ctx context.Context, collectionName string, esIndex string) error {
+	slog.Info("初始化 Mongo-Es 数据同步流程")
+	collection := global.CHAT_MONGODB.Collection(collectionName)
+	pipeline := mongo.Pipeline{}
 
-	collection := mongoDB.Collection(collectionName)
-	pipeline := mongo.Pipeline{} // 可以自定义过滤条件
-	cs, err := collection.Watch(ctx, pipeline)
+	//启动监听
+	watch, err := collection.Watch(ctx, pipeline)
 	if err != nil {
-		log.Fatalf("监听 Change Stream 失败: %v", err)
+		return fmt.Errorf("监听 Change Stream 失败: %v", err)
 	}
-	defer cs.Close(ctx)
+	defer watch.Close(ctx)
+	slog.Info("开始监听 MongoDB 变更并同步到 ES...")
 
-	fmt.Println("开始监听 MongoDB 变更并同步到 ES...")
-
-	for cs.Next(ctx) {
+	//开始监听
+	for watch.Next(ctx) {
+		//解码文档 bson.M
 		var event bson.M
-		if err := cs.Decode(&event); err != nil {
-			log.Println("解码 Change Stream 事件失败:", err)
+		if err := watch.Decode(&event); err != nil {
+			slog.Error("解码 Change Stream 事件失败:", "err", err)
 			continue
 		}
-		log.Printf("收到 Change Stream 事件: %v\n", event)
-		opType, _ := event["operationType"].(string)
-		log.Printf("操作类型 (长度: %d): %q\n", len(opType), opType) // %q 会用引号包围字符串，并转义特殊字符
-		opType = strings.TrimSpace(opType)
-		log.Printf("操作类型 (清理后，长度: %d): %q\n", len(opType), opType) // 再次打印确认
-
-		doc := event["fullDocument"]
-		log.Printf("fullDocument 的实际类型是: %T\n", doc) // <-- 添加这行
-
-		switch opType {
-		case "insert", "replace", "update":
-			fmt.Println("成功进入 insert、replace、update")
-
+		operationType, ok := event["operationType"].(string)
+		if !ok {
+			slog.Error("无法获取 operationType 或其类型不是 string", "event", event)
+			continue
+		}
+		operationType = strings.TrimSpace(operationType)
+		document, ok := event["fullDocument"].(bson.M)
+		if !ok {
 			// 1. 将 fullDocument (bson.D) 编码回 BSON 字节
-			docBytes, err := bson.Marshal(doc)
+			docBytes, err := bson.Marshal(event["fullDocument"])
 			if err != nil {
-				log.Printf("Marshal fullDocument 到 BSON 字节失败: %v\n", err)
+				slog.Error("document 到 BSON 字节失败:", "err", err)
 				continue
 			}
 
@@ -56,69 +52,70 @@ func StartMongoToEsSync(ctx context.Context, mongoDB *mongo.Database, esClient *
 			var docMap bson.M
 			err = bson.Unmarshal(docBytes, &docMap)
 			if err != nil {
-				log.Printf("Unmarshal BSON 字节到 bson.M 失败: %v\n", err)
+				slog.Error("BSON 字节到 bson.M 失败: ", "err", err)
 				continue
 			}
-			// 获取文档ID
+			document = docMap
+		}
+
+		switch operationType {
+		case "insert", "replace", "update":
+			//先获取id，再把文档里的_id删掉，不然写入es的时候就会多一个_id
 			var id string
-			// 尝试断言为 bson.ObjectID
-			if mongoID, ok := docMap["_id"].(bson.ObjectID); ok {
-				id = mongoID.Hex()                         // 使用 Hex() 方法获取十六进制字符串
-				log.Printf("成功将 _id 转换为十六进制字符串: %s\n", id) // 添加日志确认
+			if mongoID, ok := document["_id"].(bson.ObjectID); ok {
+				id = mongoID.Hex() // 使用 Hex() 方法获取十六进制字符串
 			} else {
-				// 如果 _id 不是 bson.ObjectID 类型，则回退到通用字符串格式化
-				id = fmt.Sprintf("%v", docMap["_id"])
-				log.Printf("警告: 文档 _id 类型不是 bson.ObjectID，而是 %T. 使用通用字符串格式化: %s\n", docMap["_id"], id)
+				id = fmt.Sprintf("%v", document["_id"])
+				slog.Warn("警告: 文档 _id 类型不是 bson.ObjectID,使用通用字符串格式化: ", "id", id)
 			}
-			// 从 docMap 中删除 _id 字段，以免它被包含在 JSON Body 中
-			delete(docMap, "_id")
-			// 转成 JSON
-			jsonBody, err := json.Marshal(docMap)
+			delete(document, "_id")
+
+			//把文档转换为json，为了写入es
+			jsonDocument, err := json.Marshal(document)
 			if err != nil {
-				log.Printf("Marshal docMap 到 JSON 失败: %v\n", err)
+				slog.Error("document 到 JSON 失败", "err", err)
 				continue
 			}
-			if jsonBody == nil || len(jsonBody) == 0 {
-				log.Println("Marshal JSON 结果为空，跳过写入ES。原始 docMap:", docMap)
+			if jsonDocument == nil || len(jsonDocument) == 0 {
+				slog.Error("JSON 结果为空，跳过写入ES。原始 document:", document)
 				continue
 			}
-			// 写入 ES
-			fmt.Println("开始写入es" + string(jsonBody))
-			res, err := esClient.Index(
+
+			//写入es
+			res, err := global.CHAT_ES.Index(
 				esIndex,
-				strings.NewReader(string(jsonBody)),
-				esClient.Index.WithDocumentID(id),
-				esClient.Index.WithContext(ctx),
+				strings.NewReader(string(jsonDocument)),
+				global.CHAT_ES.Index.WithDocumentID(id),
+				global.CHAT_ES.Index.WithContext(ctx),
 			)
 			if err != nil {
-				log.Println("写入 ES 失败:", err)
+				slog.Error("写入 ES 失败:", "err", err)
 			} else {
 				if res.IsError() { // <<< 检查这个错误
-					log.Printf("ES 索引文档失败: %s - 文档ID: %s, 响应: %s\n", res.Status(), id, res.String())
+					slog.Error("ES 索引文档失败:", "文档", res.Status(), "文档ID:", id, "响应:", res.String())
 				} else {
-					log.Printf("ES 文档同步成功: %s, 文档ID: %s\n", res.Status(), id) // <<< 成功日志
+					slog.Info("ES 文档同步成功: ", "文档", res.Status(), "文档ID:", id) // <<< 成功日志
 				}
 				res.Body.Close()
 			}
 
 		case "delete":
-			// 删除 ES 文档
-			docKey := event["documentKey"].(bson.M)
-			id := fmt.Sprintf("%v", docKey["_id"])
-			res, err := esClient.Delete(esIndex, id, esClient.Delete.WithContext(ctx))
+			documentKey := event["documentKey"].(bson.M)
+			id := fmt.Sprintf("%v", documentKey["_id"])
+			res, err := global.CHAT_ES.Delete(esIndex, id, global.CHAT_ES.Delete.WithContext(ctx))
 			if err != nil {
-				log.Println("删除 ES 文档失败:", err)
+				slog.Error("删除 ES 文档失败:", "err", err)
 			} else {
 				res.Body.Close()
 			}
-		default: // 添加 default case，捕获所有未匹配的情况
-			log.Printf("警告：opType '%s' (%q) 未匹配任何已知操作类型。原始事件: %v\n", opType, opType, event)
+
+		default:
+			slog.Error("未匹配到任何操作类型:", "operationType", operationType)
+		}
+
+		if err := watch.Err(); err != nil {
+			slog.Error("Change Stream 监听出错：", "err", err)
 		}
 	}
-
-	if err := cs.Err(); err != nil {
-		log.Fatalf("Change Stream 监听出错: %v", err)
-	}
-
 	return nil
 }

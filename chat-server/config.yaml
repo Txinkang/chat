@@ -8,21 +8,33 @@ mysql:
   password: root
   dbname: chat
   charset: utf8mb4
-
-mongo:
-  uri: 666mongodb+srv://root:root@chat-mongo.rimufll.mongodb.net/?retryWrites=true&w=majority&appName=chat-mongo
-  dbname: chat
-
-elasticsearch:
-  address: https://4ff4cca5c85e41169f6e3fc0ce869900.ap-east-1.aws.elastic-cloud.com:443
-  api_key: SndVaUY1Y0JNMVVNVmZZQ1JFd0s6WlYtZkNfS3dMc2hFbVBMZUJmUnhMdw==
-  insecure_skip_verify: true
+  max_lifetime: 300      # 连接的最大生命周期（秒），超过此时间连接会被关闭并重新创建
+  max_open_conns: 20    # 最大打开连接数（包括空闲和正在使用的）
+  max_idle_conns: 10     # 最大空闲连接数
+  conn_timeout: 5
 
 redis:
   address: "localhost:6379"
   username: "root"
-  password: "root"         
+  password: "root"
   db: 0
+  pool_size: 100         # 连接池大小（最大连接数）
+  min_idle_conns: 10     # 最小空闲连接数
+  pool_timeout: 5        # 获取连接的超时时间（秒）
+  idle_timeout: 300
+
+mongo:
+  uri: mongodb+srv://root:root@chat-mongo.rimufll.mongodb.net/?retryWrites=true&w=majority&appName=chat-mongo
+  dbname: chat
+  min_pool_size: 5       # 最小连接数
+  max_pool_size: 100     # 最大连接数
+  connect_timeout: 10    # 连接超时时间（秒）
+  max_conn_idle_time: 300 # 连接最大空闲时间（秒）
+  
+elasticsearch:
+  address: https://4ff4cca5c85e41169f6e3fc0ce869900.ap-east-1.aws.elastic-cloud.com:443
+  api_key: SndVaUY1Y0JNMVVNVmZZQ1JFd0s6WlYtZkNfS3dMc2hFbVBMZUJmUnhMdw==
+  insecure_skip_verify: true
 
 logger:
   level: info

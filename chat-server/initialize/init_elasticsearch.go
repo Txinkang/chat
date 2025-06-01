@@ -1,18 +1,17 @@
 package initialize
 
 import (
+	"chat-server/global"
 	"context"
-	"fmt"
 	"github.com/elastic/go-elasticsearch/v9"
 	"log/slog"
+	"net/http"
 	"time"
 )
 
-var EsClient *elasticsearch.Client
-
 func InitElasticSearch() error {
 	slog.Info("初始化elasticsearch")
-	EsConfig := AppConfig.ElasticSearch
+	EsConfig := global.CHAT_CONFIG.ElasticSearch
 
 	cfg := elasticsearch.Config{
 		Addresses: []string{
@@ -24,6 +23,13 @@ func InitElasticSearch() error {
 		//Transport: &http.Transport{
 		//	TLSClientConfig: &tls.Config{InsecureSkipVerify: EsConfig.InsecureSkipVerify},
 		//},
+		Transport: &http.Transport{
+			MaxIdleConns:          100,              // 保持的最大空闲连接数
+			IdleConnTimeout:       90 * time.Second, // 空闲连接超时时间
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second) // 15秒超时
@@ -31,19 +37,25 @@ func InitElasticSearch() error {
 
 	client, err := elasticsearch.NewClient(cfg)
 	if err != nil {
-		return fmt.Errorf("Elasticsearch 连接失败: %w", err)
+		slog.Error("Elasticsearch 连接失败: ", "err", err)
+		return err
 	}
 
 	res, err := client.Info(client.Info.WithContext(ctx))
 	if err != nil {
-		return fmt.Errorf("Elasticsearch Ping 失败: %w", err)
+		slog.Error("Elasticsearch Ping 失败: ", "err", err)
+		closeErr := res.Body.Close()
+		if closeErr != nil {
+			slog.Error("Elasticsearch Ping 失败后，关闭 Elasticsearch 失败: ", "closeErr", closeErr)
+		}
+		return err
 	}
-	defer res.Body.Close()
 
 	if res.IsError() {
-		return fmt.Errorf("Elasticsearch 返回错误: %s", res.String())
+		slog.Error("Elasticsearch 返回错误: ", "err", err)
+		return err
 	}
-	EsClient = client
+	global.CHAT_ES = client
 	slog.Info("Elasticsearch连接成功")
 	return nil
 }
