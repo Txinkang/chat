@@ -46,7 +46,7 @@ func InitElasticSearch() error {
 		slog.Error("Elasticsearch Ping 失败: ", "err", err)
 		closeErr := res.Body.Close()
 		if closeErr != nil {
-			slog.Error("Elasticsearch Ping 失败后，关闭 Elasticsearch 失败: ", "closeErr", closeErr)
+			slog.Error("Elasticsearch Ping 失败后，，响应数据流关闭失败: ", "closeErr", closeErr)
 		}
 		return err
 	}

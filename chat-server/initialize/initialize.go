@@ -1,8 +1,10 @@
 package initialize
 
 import (
-	"chat-server/service" // 导入 service 包
+	"chat-server/global"
+	"chat-server/service"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"runtime/debug"
@@ -38,23 +40,34 @@ func Initialize(appCtx context.Context, appCancel context.CancelFunc, wg *sync.W
 	}
 
 	// 4. 启动数据同步服务 (或其他后台服务)
-	wg.Add(1) // 增加 Goroutine 计数
-	go func() {
-		defer wg.Done() // Goroutine 结束时递减计数
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("数据同步 Goroutine 发生 panic", "panic_value", r, "stack_trace", string(debug.Stack()))
-			}
-		}()
-
-		syncErr := service.StartMongoToEsSync(appCtx, "messages", "messages")
-		if syncErr != nil && syncErr != context.Canceled {
-			slog.Error("MongoDB 到 Elasticsearch 同步服务终止，发生非取消错误", "err", syncErr)
-			appCancel()
-		} else if syncErr == context.Canceled {
-			slog.Info("MongoDB 到 Elasticsearch 同步服务已因 Context 取消而停止。")
+	if len(global.CHAT_CONFIG.MongoEsSync) == 0 {
+		slog.Warn("未配置任何 MongoDB 到 Elasticsearch 的同步对，跳过启动数据同步服务。")
+	} else {
+		slog.Info("开始为配置的同步对启动数据同步服务...")
+		for _, pair := range global.CHAT_CONFIG.MongoEsSync {
+			p := pair
+			wg.Add(1) // 增加 Goroutine 计数
+			go func() {
+				defer wg.Done() // Goroutine 结束时递减计数
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Error(fmt.Sprintf("Mongo-ES 同步 Goroutine (Collection: %s, Index: %s) 发生 panic", p.MongoCollection, p.EsIndex),
+							"panic_value", r, "stack_trace", string(debug.Stack()))
+						appCancel() // 如果 Goroutine 发生 panic，立即触发全局取消
+					}
+				}()
+				slog.Info(fmt.Sprintf("启动 Mongo-to-ES 数据同步服务 (Collection: %s -> Index: %s)...", p.MongoCollection, p.EsIndex))
+				syncErr := service.StartMongoToEsSync(appCtx, p.MongoCollection, p.EsIndex)
+				if syncErr != nil && !errors.Is(syncErr, context.Canceled) {
+					slog.Error(fmt.Sprintf("MongoDB 到 Elasticsearch 同步服务 (Collection: %s -> Index: %s) 终止，发生非取消错误", p.MongoCollection, p.EsIndex), "err", syncErr)
+					appCancel()
+				} else if errors.Is(syncErr, context.Canceled) {
+					slog.Info(fmt.Sprintf("MongoDB 到 Elasticsearch 同步服务 (Collection: %s -> Index: %s) 已因 Context 取消而停止。", p.MongoCollection, p.EsIndex))
+				}
+			}()
 		}
-	}()
+
+	}
 
 	slog.Info("所有应用程序组件初始化完成。")
 	return nil
