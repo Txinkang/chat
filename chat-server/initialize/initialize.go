@@ -15,17 +15,17 @@ import (
 // 它接受一个 context 和 WaitGroup，用于统一管理 Goroutine 生命周期
 func Initialize(appCtx context.Context, appCancel context.CancelFunc, wg *sync.WaitGroup) error { // 接受 appCtx 和 wg
 
-	// 1. 初始化配置文件 (检查错误)
+	// 初始化配置文件 (检查错误)
 	if err := InitConfig(); err != nil {
 		return fmt.Errorf("初始化配置文件失败: %w", err)
 	}
 
-	// 2. 初始化日志 (检查错误)
+	// 初始化日志 (检查错误)
 	if err := InitLogger(); err != nil {
 		return fmt.Errorf("初始化日志工具失败: %w", err)
 	}
 
-	// 3. 初始化数据库 (检查错误)
+	// 初始化数据库 (检查错误)
 	if err := InitMySQL(); err != nil {
 		return fmt.Errorf("初始化 MySQL 失败: %w", err)
 	}
@@ -39,7 +39,12 @@ func Initialize(appCtx context.Context, appCancel context.CancelFunc, wg *sync.W
 		return fmt.Errorf("初始化 Elasticsearch 失败: %w", err)
 	}
 
-	// 4. 启动数据同步服务 (或其他后台服务)
+	// 数据库结构检测与创建 (传递 AppConfig.DBSchema)
+	if err := InitDatabaseSchemas(appCtx, global.CHAT_CONFIG.DBSchema); err != nil { // <-- 修改这里
+		return fmt.Errorf("初始化数据库结构失败: %w", err)
+	}
+
+	// 启动数据同步服务 (或其他后台服务)
 	if len(global.CHAT_CONFIG.MongoEsSync) == 0 {
 		slog.Warn("未配置任何 MongoDB 到 Elasticsearch 的同步对，跳过启动数据同步服务。")
 	} else {
@@ -66,8 +71,10 @@ func Initialize(appCtx context.Context, appCancel context.CancelFunc, wg *sync.W
 				}
 			}()
 		}
-
 	}
+
+	// 初始化路由
+	InitRouter()
 
 	slog.Info("所有应用程序组件初始化完成。")
 	return nil

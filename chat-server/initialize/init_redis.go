@@ -3,14 +3,13 @@ package initialize
 import (
 	"chat-server/global"
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/go-redis/redis/v8"
 )
 
 func InitRedis() error {
-	slog.Info("初始化redis")
+	global.CHAT_LOG.Info("初始化redis")
 
 	redisConfig := global.CHAT_CONFIG.Redis // 假设你已经反序列化到 AppConfig.Redis
 	global.CHAT_REDIS = redis.NewClient(&redis.Options{
@@ -28,13 +27,13 @@ func InitRedis() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := global.CHAT_REDIS.Ping(ctx).Err(); err != nil {
-		slog.Error("Redis 连接失败: ", "err", err)
+		global.CHAT_LOG.Error("Redis 连接失败: ", "err", err)
 		closeErr := global.CHAT_REDIS.Close()
 		if closeErr != nil {
-			slog.Error("Redis 连接失败后，关闭 Redis 失败: ", "err", closeErr)
+			global.CHAT_LOG.Error("Redis 连接失败后，关闭 Redis 失败: ", "err", closeErr)
 		}
 		return err
 	}
-	slog.Info("Redis 连接成功")
+	global.CHAT_LOG.Info("Redis 连接成功")
 	return nil
 }

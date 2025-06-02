@@ -7,12 +7,11 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"log/slog"
 	"time"
 )
 
 func InitMySQL() error {
-	slog.Info("初始化mysql")
+	global.CHAT_LOG.Info("初始化mysql")
 	// 获取反序列化后的mysql
 	mysqlConfig := global.CHAT_CONFIG.Mysql
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
@@ -24,13 +23,13 @@ func InitMySQL() error {
 		Logger: logger.Default.LogMode(logger.Info), // 输出所有 SQL
 	})
 	if err != nil {
-		slog.Error("mysql连接失败：", "err", err)
+		global.CHAT_LOG.Error("mysql连接失败：", "err", err)
 		return err
 	}
 	// 获取底层的 *sql.DB 对象
 	sqlDB, err := global.CHAT_MYSQL.DB()
 	if err != nil {
-		slog.Error("获取 GORM 底层 *sql.DB 失败: ", "err", err)
+		global.CHAT_LOG.Error("获取 GORM 底层 *sql.DB 失败: ", "err", err)
 		return err
 	}
 	// 设置连接池参数
@@ -43,13 +42,13 @@ func InitMySQL() error {
 	defer cancel()
 
 	if err = sqlDB.PingContext(ctx); err != nil {
-		slog.Error("Ping MySQL 失败: ", "err", err)
+		global.CHAT_LOG.Error("Ping MySQL 失败: ", "err", err)
 		closeErr := sqlDB.Close()
 		if closeErr != nil {
-			slog.Error("Ping MySQL 失败后，关闭 MySQL 失败: ", "err", closeErr)
+			global.CHAT_LOG.Error("Ping MySQL 失败后，关闭 MySQL 失败: ", "err", closeErr)
 		}
 		return err
 	}
-	slog.Info("mysql连接成功")
+	global.CHAT_LOG.Info("mysql连接成功")
 	return nil
 }

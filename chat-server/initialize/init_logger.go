@@ -42,8 +42,8 @@ func InitLogger() error {
 	}
 
 	// 3、设置全局默认 Logger
-	logger := slog.New(handler)
-	slog.SetDefault(logger)
+	global.CHAT_LOG = slog.New(handler)
+	slog.SetDefault(global.CHAT_LOG)
 
 	fmt.Printf("日志配置已加载：级别=%s, 输出=%s, 格式=%s, 源文件=%t\n",
 		loggerConfig.Level, loggerConfig.Output, loggerConfig.Format, loggerConfig.SourcePath)

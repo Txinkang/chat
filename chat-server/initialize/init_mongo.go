@@ -5,12 +5,11 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"log/slog"
 	"time"
 )
 
 func InitMongo() error {
-	slog.Info("初始化mongo")
+	global.CHAT_LOG.Info("初始化mongo")
 	mongoConfig := global.CHAT_CONFIG.Mongo
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	clientOpts := options.Client().ApplyURI(mongoConfig.URI).SetServerAPIOptions(serverAPI).
@@ -21,7 +20,7 @@ func InitMongo() error {
 
 	client, err := mongo.Connect(clientOpts)
 	if err != nil {
-		slog.Error("连接 MongoDB 失败: ", "err", err)
+		global.CHAT_LOG.Error("连接 MongoDB 失败: ", "err", err)
 		return err
 	}
 
@@ -29,18 +28,18 @@ func InitMongo() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(mongoConfig.ConnectTimeout)*time.Second)
 	defer cancel()
 	if err = client.Ping(ctx, nil); err != nil {
-		slog.Error("Ping MongoDB 失败", "err", err)
+		global.CHAT_LOG.Error("Ping MongoDB 失败", "err", err)
 		disconnectCtx, disconnectCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer disconnectCancel()
 		closeErr := client.Disconnect(disconnectCtx)
 		if closeErr != nil {
-			slog.Error("Ping MongoDB 失败后，关闭 MongoDB 失败: ", "err", closeErr)
+			global.CHAT_LOG.Error("Ping MongoDB 失败后，关闭 MongoDB 失败: ", "err", closeErr)
 		}
 		return err
 	}
 
 	global.CHAT_MONGO = client
 	global.CHAT_MONGODB = client.Database(mongoConfig.DBName)
-	slog.Info("MongoDB连接成功")
+	global.CHAT_LOG.Info("MongoDB连接成功")
 	return nil
 }

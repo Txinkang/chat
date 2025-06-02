@@ -4,13 +4,12 @@ import (
 	"chat-server/global"
 	"context"
 	"github.com/elastic/go-elasticsearch/v9"
-	"log/slog"
 	"net/http"
 	"time"
 )
 
 func InitElasticSearch() error {
-	slog.Info("初始化elasticsearch")
+	global.CHAT_LOG.Info("初始化elasticsearch")
 	EsConfig := global.CHAT_CONFIG.ElasticSearch
 
 	cfg := elasticsearch.Config{
@@ -37,25 +36,25 @@ func InitElasticSearch() error {
 
 	client, err := elasticsearch.NewClient(cfg)
 	if err != nil {
-		slog.Error("Elasticsearch 连接失败: ", "err", err)
+		global.CHAT_LOG.Error("Elasticsearch 连接失败: ", "err", err)
 		return err
 	}
 
 	res, err := client.Info(client.Info.WithContext(ctx))
 	if err != nil {
-		slog.Error("Elasticsearch Ping 失败: ", "err", err)
+		global.CHAT_LOG.Error("Elasticsearch Ping 失败: ", "err", err)
 		closeErr := res.Body.Close()
 		if closeErr != nil {
-			slog.Error("Elasticsearch Ping 失败后，，响应数据流关闭失败: ", "closeErr", closeErr)
+			global.CHAT_LOG.Error("Elasticsearch Ping 失败后，，响应数据流关闭失败: ", "closeErr", closeErr)
 		}
 		return err
 	}
 
 	if res.IsError() {
-		slog.Error("Elasticsearch 返回错误: ", "err", err)
+		global.CHAT_LOG.Error("Elasticsearch 返回错误: ", "err", err)
 		return err
 	}
 	global.CHAT_ES = client
-	slog.Info("Elasticsearch连接成功")
+	global.CHAT_LOG.Info("Elasticsearch连接成功")
 	return nil
 }
