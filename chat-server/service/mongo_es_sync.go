@@ -13,7 +13,9 @@ import (
 	"strings"
 )
 
-func StartMongoToEsSync(ctx context.Context, collectionName string, esIndex string) error {
+type MongoToEsSync struct{}
+
+func (s *MongoToEsSync) StartMongoToEsSync(ctx context.Context, collectionName string, esIndex string) error {
 	slog.Info(fmt.Sprintf("初始化 Mongo-Es 数据同步流程 (Collection: %s, Index: %s)", collectionName, esIndex))
 	collection := global.CHAT_MONGODB.Collection(collectionName)
 	pipeline := mongo.Pipeline{}

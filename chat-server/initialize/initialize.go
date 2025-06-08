@@ -62,7 +62,7 @@ func Initialize(appCtx context.Context, appCancel context.CancelFunc, wg *sync.W
 					}
 				}()
 				slog.Info(fmt.Sprintf("启动 Mongo-to-ES 数据同步服务 (Collection: %s -> Index: %s)...", p.MongoCollection, p.EsIndex))
-				syncErr := service.StartMongoToEsSync(appCtx, p.MongoCollection, p.EsIndex)
+				syncErr := service.ServiceGroupApp.StartMongoToEsSync(appCtx, p.MongoCollection, p.EsIndex)
 				if syncErr != nil && !errors.Is(syncErr, context.Canceled) {
 					slog.Error(fmt.Sprintf("MongoDB 到 Elasticsearch 同步服务 (Collection: %s -> Index: %s) 终止，发生非取消错误", p.MongoCollection, p.EsIndex), "err", syncErr)
 					appCancel()

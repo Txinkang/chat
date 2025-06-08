@@ -65,4 +65,11 @@ logger:
   source_path: true
 
 
+# JWT配置
+jwt:
+  secret: "your-secret-key-here"  # JWT密钥，生产环境请使用强密钥
+  expires_time: 7                 # 过期时间（天）
+  issuer: "chat-server"           # 签发人
+
+
 

@@ -7,6 +7,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"gorm.io/gorm/schema"
 	"time"
 )
 
@@ -21,6 +22,9 @@ func InitMySQL() error {
 	var err error
 	global.CHAT_MYSQL, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info), // 输出所有 SQL
+		NamingStrategy: schema.NamingStrategy{
+			SingularTable: true, // 使用单数表名
+		},
 	})
 	if err != nil {
 		global.CHAT_LOG.Error("mysql连接失败：", "err", err)

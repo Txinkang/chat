@@ -10,18 +10,18 @@ import (
 
 // InitRouter 初始化所有路由
 func InitRouter() {
-	Router := gin.New()
-	Router.Use(gin.Recovery())
-	if gin.Mode() == gin.DebugMode {
-		Router.Use(gin.Logger())
-	}
-	Router.Use(middleware.Cors())
-	apiV1 := Router.Group("/api/v1")
+	global.CHAT_ROUTERS = gin.Default()
+
+	// 全局中间件
+	global.CHAT_ROUTERS.Use(middleware.Cors())
+
+	// 使用带排除路径的JWT认证中间件，对所有路由进行认证
+	global.CHAT_ROUTERS.Use(middleware.JWTAuth())
+
+	// 初始化API v1路由组
+	apiV1 := global.CHAT_ROUTERS.Group("/api/v1")
 
 	// 初始化各个模块的路由
-	router.RouterGroupApp.InitChatRouter(apiV1)
-	router.RouterGroupApp.InitUserRouter(apiV1)
-
-	global.CHAT_ROUTERS = Router
-
+	router.RouterGroupApp.UserRouter.InitUserRouter(apiV1)
+	router.RouterGroupApp.ChatRouter.InitChatRouter(apiV1)
 }
