@@ -2,19 +2,28 @@ package middleware
 
 import (
 	"chat-server/global"
-	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 )
 
-// JWT 声明结构
-type Claims struct {
-	UserID   uint   `json:"user_id"`
+type TokenPair struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int    `json:"expires_in"`
+}
+
+type AccessToken struct {
+	UserID   string `json:"user_id"`
 	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+type RefreshToken struct {
+	UserID  string `json:"user_id"`
+	TokenID string `json:"token_id"`
 	jwt.RegisteredClaims
 }
 
@@ -22,11 +31,11 @@ type Claims struct {
 var excludePaths = []string{
 	"/api/v1/user/register",
 	"/api/v1/user/login",
-	//"/api/v1/user/test",
-	// 可以添加更多不需要验证的路径
+	"/api/v1/user/test",
+	"/token/refreshToken",
+	"/swagger/",
 }
 
-// JWTAuthWithExclusions 带路径排除的JWT认证中间件
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取当前请求路径
@@ -59,8 +68,10 @@ func JWTAuth() gin.HandlerFunc {
 		}
 
 		// 验证token
-		claims, err := ParseToken(token)
-		if err != nil {
+		claims, err := jwt.ParseWithClaims(token, &AccessToken{}, func(token *jwt.Token) (interface{}, error) {
+			return []byte(global.CHAT_CONFIG.JWT.Secret), nil
+		})
+		if err != nil || !claims.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"code":    401,
 				"data":    nil,
@@ -74,43 +85,4 @@ func JWTAuth() gin.HandlerFunc {
 		c.Set("claims", claims)
 		c.Next()
 	}
-}
-
-// ParseToken 解析JWT令牌
-func ParseToken(tokenString string) (*Claims, error) {
-	// 解析token
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(global.CHAT_CONFIG.JWT.Secret), nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims, nil
-	}
-
-	return nil, errors.New("invalid token")
-}
-
-// GenerateToken 生成JWT令牌
-func GenerateToken(userID uint, username string) (string, error) {
-	// 创建声明
-	claims := Claims{
-		UserID:   userID,
-		Username: username,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * time.Duration(global.CHAT_CONFIG.JWT.ExpiresTime))), // 过期时间
-			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                                         // 签发时间
-			NotBefore: jwt.NewNumericDate(time.Now()),                                                                         // 生效时间
-			Issuer:    global.CHAT_CONFIG.JWT.Issuer,                                                                          // 签发人
-		},
-	}
-
-	// 使用指定的签名方法创建签名对象
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// 使用指定的secret签名并获得完整的编码后的字符串token
-	return token.SignedString([]byte(global.CHAT_CONFIG.JWT.Secret))
 }

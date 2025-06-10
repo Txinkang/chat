@@ -67,8 +67,9 @@ logger:
 
 # JWT配置
 jwt:
-  secret: "your-secret-key-here"  # JWT密钥，生产环境请使用强密钥
-  expires_time: 7                 # 过期时间（天）
+  secret: "chat"  # JWT密钥，生产环境请使用强密钥
+  access_time: 30
+  refresh_time: 30
   issuer: "chat-server"           # 签发人
 
 

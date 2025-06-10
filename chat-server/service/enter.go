@@ -6,4 +6,5 @@ type ServiceGroup struct {
 	ChatService
 	UserService
 	MongoToEsSync
+	TokenService
 }
