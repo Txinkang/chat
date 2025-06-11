@@ -61,7 +61,7 @@ func (s *UserService) RegisterUser(username, password, email string) (*middlewar
 	}
 	// 保存RefreshToken状态
 	tokenId := uuid.New().String()
-	err = ServiceGroupApp.TokenService.StoreRefreshToken(userID, tokenId, time.Now().Add(time.Hour*time.Duration(global.CHAT_CONFIG.JWT.RefreshTime)), "web")
+	err = ServiceGroupApp.TokenService.StoreRefreshToken(userID, tokenId, time.Now().Add(time.Hour*24*time.Duration(global.CHAT_CONFIG.JWT.RefreshTime)), "web")
 	if err != nil {
 		global.CHAT_LOG.Error("RegisterUser-->保存RefreshToken状态失败", "err", err)
 		return nil, common.NewServiceError(common.ERROR)

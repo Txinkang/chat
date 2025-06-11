@@ -37,7 +37,8 @@ func (s *TokenService) GenerateTokenPair(userID string, username string) (*middl
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 	accessTokenString, err := accessToken.SignedString([]byte(global.CHAT_CONFIG.JWT.Secret))
 	if err != nil {
-		return nil, err
+		global.CHAT_LOG.Error("GenerateTokenPair-->签名生成accessToken失败", "err", err)
+		return nil, common.NewServiceError(common.ERROR)
 	}
 
 	// 创建刷新令牌
@@ -55,7 +56,8 @@ func (s *TokenService) GenerateTokenPair(userID string, username string) (*middl
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
 	refreshTokenString, err := refreshToken.SignedString([]byte(global.CHAT_CONFIG.JWT.Secret))
 	if err != nil {
-		return nil, err
+		global.CHAT_LOG.Error("GenerateTokenPair-->签名生成refreshToken失败", "err", err)
+		return nil, common.NewServiceError(common.ERROR)
 	}
 
 	return &middleware.TokenPair{
@@ -96,7 +98,11 @@ func (s *TokenService) RefreshAccessToken(refreshTokenString string) (string, er
 	}
 
 	// 检查令牌是否被撤销
-	if s.isTokenRevoked(refreshClaims.UserID, refreshClaims.TokenID) {
+	isTokenRevoked, err := s.isTokenRevoked(refreshClaims.UserID, refreshClaims.TokenID)
+	if err != nil {
+		return "", common.NewServiceError(common.ERROR)
+	}
+	if isTokenRevoked {
 		return "", common.NewServiceError(common.REFRESH_TOKEN_REVOKED)
 	}
 
@@ -151,10 +157,19 @@ func (s *TokenService) StoreRefreshToken(userID string, tokenID string, expiresA
 }
 
 // 检查令牌是否被撤销
-func (s *TokenService) isTokenRevoked(userID string, tokenID string) bool {
+func (s *TokenService) isTokenRevoked(userID string, tokenID string) (bool, error) {
 	// 实现检查逻辑
-	// 例如：查询数据库中的isRevoked字段
-	return false
+	tokenKey := fmt.Sprintf("refresh_token:%s:%s", userID, tokenID)
+	exists, err := global.CHAT_REDIS.Exists(context.Background(), tokenKey).Result()
+	if err != nil {
+		global.CHAT_LOG.Error("检查RefreshToken是否被撤销，操作失败", "err", err.Error())
+		return false, err
+	}
+	if exists == 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // 根据ID获取用户
