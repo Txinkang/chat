@@ -4,10 +4,11 @@ USE `chat`;
 
 CREATE TABLE IF NOT EXISTS `user` (
     `id` VARCHAR(255) NOT NULL COMMENT '用户ID',
-    `username` VARCHAR(255) NOT NULL UNIQUE, -- username 通常是唯一的
+    `user_account` VARCHAR(255) NOT NULL UNIQUE, -- user_account 通常是唯一的
     `password` VARCHAR(255) NOT NULL,
     `nickname` VARCHAR(255) NOT NULL,
     `avatar` VARCHAR(255) NOT NULL,
+    `email` VARCHAR(255) NOT NULL,
     `created_at` BIGINT NOT NULL COMMENT '创建时间戳 (毫秒)',
     `updated_at` BIGINT NOT NULL COMMENT '更新时间戳 (毫秒)',
     PRIMARY KEY (`id`)

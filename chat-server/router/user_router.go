@@ -12,7 +12,7 @@ type UserRouter struct{}
 func (s *UserRouter) InitUserRouter(apiV1 *gin.RouterGroup) {
 	{
 		apiV1.POST("/user/register", v1.ApiGroupApp.Register)
-		//apiV1.POST("/user/login", v1.ApiGroupApp.Login)
+		apiV1.POST("/user/login", v1.ApiGroupApp.LoginAccount)
 		apiV1.GET("/user/test", v1.ApiGroupApp.Test)
 	}
 }

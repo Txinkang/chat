@@ -18,14 +18,14 @@ import (
 type TokenService struct{}
 
 // GenerateTokenPair 生成JWT令牌
-func (s *TokenService) GenerateTokenPair(userID string, username string) (*middleware.TokenPair, error) {
+func (s *TokenService) GenerateTokenPair(userID string, userAccount string) (*middleware.TokenPair, error) {
 	// 生成唯一的令牌ID
 	tokenID := uuid.New().String()
 
 	// 创建访问令牌
 	accessClaims := middleware.AccessToken{
-		UserID:   userID,
-		Username: username,
+		UserID:      userID,
+		UserAccount: userAccount,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(global.CHAT_CONFIG.JWT.AccessTime))), // 过期时间
 			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                                     // 签发时间
@@ -113,7 +113,7 @@ func (s *TokenService) RefreshAccessToken(refreshTokenString string) (string, er
 	}
 
 	// 生成新的令牌对
-	tokenPair, err := s.GenerateTokenPair(user.ID, user.Username)
+	tokenPair, err := s.GenerateTokenPair(user.ID, user.UserAccount)
 	if err != nil {
 		return "", err
 	}
@@ -149,10 +149,12 @@ func (s *TokenService) StoreRefreshToken(userID string, tokenID string, expiresA
 
 	// 存储用户令牌集合
 	userTokenKey := fmt.Sprintf("user_tokens:%s", userID)
-	if err := global.CHAT_REDIS.Set(ctx, userTokenKey, tokenID, time.Hour*24*30).Err(); err != nil {
+	if err := global.CHAT_REDIS.SAdd(ctx, userTokenKey, tokenID).Err(); err != nil {
 		global.CHAT_LOG.Error("存储RefreshToken失败", "err", err.Error())
 		return err
 	}
+	global.CHAT_REDIS.Expire(ctx, userTokenKey, time.Hour*24*30)
+
 	return nil
 }
 
@@ -184,14 +186,14 @@ func (s *TokenService) getUserByID(userID string) (*model.User, error) {
 	return &queryUser, nil
 }
 
-// 撤销用户的所有令牌（登出所有设备）
+// RevokeAllUserTokens 撤销用户的所有令牌（登出所有设备）
 func (s *TokenService) RevokeAllUserTokens(userID uint) error {
 	// 实现撤销逻辑
 	// 例如：将用户所有令牌的isRevoked设为true
 	return nil
 }
 
-// 撤销特定令牌（单设备登出）
+// RevokeToken 撤销特定令牌（单设备登出）
 func (s *TokenService) RevokeToken(userID uint, tokenID string) error {
 	// 实现撤销逻辑
 	return nil

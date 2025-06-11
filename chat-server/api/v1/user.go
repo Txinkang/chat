@@ -4,8 +4,6 @@ import (
 	"chat-server/model/common"
 	"chat-server/model/request"
 	"errors"
-	"fmt"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -46,14 +44,12 @@ func (a *UserApi) Register(c *gin.Context) {
 
 	// 校验参数
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 打印具体错误信息以便调试
-		fmt.Println("绑定错误:", err)
 		common.Result(c, common.INVALID_PARAMS)
 		return
 	}
 
-	//处理业务
-	tokenPair, err := userService.RegisterUser(req.Username, req.Password, req.Email)
+	//处理注册业务
+	tokenPair, err := userService.RegisterUser(req.UserAccount, req.Password, req.Email)
 	if err != nil {
 		var serviceErr common.ServiceErr
 		if errors.As(err, &serviceErr) {
@@ -63,4 +59,36 @@ func (a *UserApi) Register(c *gin.Context) {
 	}
 
 	common.Result(c, common.SUCCESS, tokenPair)
+}
+
+// LoginAccount Login godoc
+// @Summary      用户登录
+// @Description  用户通过账号密码登录
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Param        request  body      request.LoginRequest  true  "用户登录信息"
+// @Success      200      {object}  common.Response
+// @Router       /api/v1/user/login [post]
+func (a *UserApi) LoginAccount(c *gin.Context) {
+	var req request.LoginRequest
+
+	// 校验参数
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.Result(c, common.INVALID_PARAMS)
+		return
+	}
+
+	// 处理登录业务
+	tokenPair, err := userService.LoginAccount(req.UserAccount, req.Password)
+	if err != nil {
+		var serviceErr common.ServiceErr
+		if errors.As(err, &serviceErr) {
+			common.Result(c, serviceErr.GetResponseCode())
+			return
+		}
+	}
+
+	common.Result(c, common.SUCCESS, tokenPair)
+
 }

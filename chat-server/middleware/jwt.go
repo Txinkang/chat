@@ -16,8 +16,8 @@ type TokenPair struct {
 }
 
 type AccessToken struct {
-	UserID   string `json:"user_id"`
-	Username string `json:"username"`
+	UserID      string `json:"user_id"`
+	UserAccount string `json:"user_account"`
 	jwt.RegisteredClaims
 }
 
