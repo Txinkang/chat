@@ -80,7 +80,7 @@ func (a *UserApi) LoginAccount(c *gin.Context) {
 	}
 
 	// 处理登录业务
-	tokenPair, err := userService.LoginAccount(req.UserAccount, req.Password)
+	tokenPair, err := userService.LoginAccount(req.UserAccount, req.Password, "ios")
 	if err != nil {
 		var serviceErr common.ServiceErr
 		if errors.As(err, &serviceErr) {

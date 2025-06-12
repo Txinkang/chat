@@ -106,6 +106,18 @@ func (s *TokenService) RefreshAccessToken(refreshTokenString string) (string, er
 		return "", common.NewServiceError(common.REFRESH_TOKEN_REVOKED)
 	}
 
+	// 删除旧令牌
+	ctx := context.Background()
+	tokenKey := fmt.Sprintf("refresh_token:%s:%s", refreshClaims.UserID, refreshClaims.TokenID)
+	if err := global.CHAT_REDIS.Del(ctx, tokenKey).Err(); err != nil {
+		return "", err
+	}
+	// 从用户的token集合中移除这个tokenID
+	userTokenKey := fmt.Sprintf("user_tokens:%s", refreshClaims.UserID)
+	if err := global.CHAT_REDIS.SRem(ctx, userTokenKey, refreshClaims.TokenID).Err(); err != nil {
+		return "", err
+	}
+
 	// 获取用户信息
 	user, err := s.getUserByID(refreshClaims.UserID)
 	if err != nil {
@@ -194,7 +206,19 @@ func (s *TokenService) RevokeAllUserTokens(userID uint) error {
 }
 
 // RevokeToken 撤销特定令牌（单设备登出）
-func (s *TokenService) RevokeToken(userID uint, tokenID string) error {
-	// 实现撤销逻辑
+func (s *TokenService) RevokeToken(userID string, tokenID string) error {
+	// 1、把refresh_token删除
+	ctx := context.Background()
+	tokenKey := fmt.Sprintf("refresh_token:%s:%s", userID, tokenID)
+	if err := global.CHAT_REDIS.Del(ctx, tokenKey).Err(); err != nil {
+		global.CHAT_LOG.Error("RevokeToken----->RefreshToken删除失败", "err", err.Error())
+		return err
+	}
+	// 2、从user_tokens集合中删除
+	userTokenKey := fmt.Sprintf("user_tokens:%s", userID)
+	if err := global.CHAT_REDIS.SRem(ctx, userTokenKey, tokenID).Err(); err != nil {
+		global.CHAT_LOG.Error("RevokeToken----->userTokenKey删除tokenID失败", "err", err.Error())
+		return err
+	}
 	return nil
 }

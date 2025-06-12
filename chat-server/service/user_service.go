@@ -5,11 +5,15 @@ import (
 	"chat-server/middleware"
 	"chat-server/model"
 	"chat-server/model/common"
+	"context"
+	"encoding/json"
 	"errors"
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
+	"fmt"
 	"regexp"
 	"time"
+
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct{}
@@ -77,7 +81,7 @@ func (s *UserService) RegisterUser(userAccount, password, email string) (*middle
 	return tokenPair, nil
 }
 
-func (s *UserService) LoginAccount(userAccount string, password string) (*middleware.TokenPair, error) {
+func (s *UserService) LoginAccount(userAccount string, password string, platform string) (*middleware.TokenPair, error) {
 	// 验证userAccount
 	var queryUser model.User
 	err := global.CHAT_MYSQL.Where("user_account = ?", userAccount).First(&queryUser).Error
@@ -92,6 +96,44 @@ func (s *UserService) LoginAccount(userAccount string, password string) (*middle
 		return nil, common.NewServiceError(common.PASSWORD_INVALID)
 	}
 
+	// 检查redis是否已存在该登录平台的token，只允许单平台登录
+	tokenKey := fmt.Sprintf("user_tokens:%s", queryUser.ID)
+	tokenIds, err := global.CHAT_REDIS.SMembers(context.Background(), tokenKey).Result()
+	if err != nil {
+		global.CHAT_LOG.Error("LoginAccount-->检查redis是否已存在该登录平台的token失败", "err", err)
+		return nil, common.NewServiceError(common.ERROR)
+	}
+	if len(tokenIds) > 0 {
+		for _, tokenId := range tokenIds {
+			// 通过tokenId获取refreshToken
+			refreshToken := fmt.Sprintf("refresh_token:%s:%s", queryUser.ID, tokenId)
+			refreshTokenData, err := global.CHAT_REDIS.Get(context.Background(), refreshToken).Result()
+			if err != nil {
+				global.CHAT_LOG.Error("LoginAccount-->获取refreshToken失败", "err", err)
+				return nil, common.NewServiceError(common.ERROR)
+			}
+			// 解析值，获取登录平台信息
+			var tokenData map[string]interface{}
+			if err = json.Unmarshal([]byte(refreshTokenData), &tokenData); err != nil {
+				global.CHAT_LOG.Error("LoginAccount-->解析refreshTokenData失败", "err", err)
+				return nil, common.NewServiceError(common.ERROR)
+
+			}
+			// 平台相同则撤销旧令牌
+			getPlatform, ok := tokenData["platform"].(string)
+			if !ok {
+				global.CHAT_LOG.Error("LoginAccount-->获取platform失败", "err", err)
+				return nil, common.NewServiceError(common.ERROR)
+			}
+			if getPlatform == platform {
+				err := ServiceGroupApp.TokenService.RevokeToken(queryUser.ID, tokenId)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+		}
+	}
 	// 通过验证，下发token
 	tokenPair, err := ServiceGroupApp.TokenService.GenerateTokenPair(queryUser.ID, queryUser.UserAccount)
 	if err != nil {
