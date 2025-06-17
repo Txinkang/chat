@@ -1,4 +1,4 @@
-package request
+package chat
 
 // 发送消息请求结构
 type SendMessageRequest struct {

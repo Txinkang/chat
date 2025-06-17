@@ -68,8 +68,9 @@ logger:
 # JWT配置
 jwt:
   secret: "chat"  # JWT密钥，生产环境请使用强密钥
-  access_time: 30
-  refresh_time: 30
+  access_time: 30 # 30分钟
+  refresh_time: 30 # 30天
+  user_tokens_time: 30 # 30天
   issuer: "chat-server"           # 签发人
 
 

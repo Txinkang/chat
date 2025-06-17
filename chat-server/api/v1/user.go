@@ -2,7 +2,7 @@ package v1
 
 import (
 	"chat-server/model/common"
-	"chat-server/model/request"
+	"chat-server/model/request/user"
 	"errors"
 	"github.com/gin-gonic/gin"
 )
@@ -40,7 +40,7 @@ func (a *UserApi) Test(c *gin.Context) {
 // @Success      200      {object}  common.Response
 // @Router       /api/v1/user/register [post]
 func (a *UserApi) Register(c *gin.Context) {
-	var req request.RegisterRequest
+	var req user.RegisterRequest
 
 	// 校验参数
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -49,7 +49,7 @@ func (a *UserApi) Register(c *gin.Context) {
 	}
 
 	//处理注册业务
-	tokenPair, err := userService.RegisterUser(req.UserAccount, req.Password, req.Email)
+	tokenPair, err := userService.RegisterUser(req.UserAccount, req.Password, req.Email, req.Platform)
 	if err != nil {
 		var serviceErr common.ServiceErr
 		if errors.As(err, &serviceErr) {
@@ -71,7 +71,7 @@ func (a *UserApi) Register(c *gin.Context) {
 // @Success      200      {object}  common.Response
 // @Router       /api/v1/user/login [post]
 func (a *UserApi) LoginAccount(c *gin.Context) {
-	var req request.LoginRequest
+	var req user.LoginRequest
 
 	// 校验参数
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -80,7 +80,7 @@ func (a *UserApi) LoginAccount(c *gin.Context) {
 	}
 
 	// 处理登录业务
-	tokenPair, err := userService.LoginAccount(req.UserAccount, req.Password, "ios")
+	tokenPair, err := userService.LoginAccount(req.UserAccount, req.Password, req.Platform)
 	if err != nil {
 		var serviceErr common.ServiceErr
 		if errors.As(err, &serviceErr) {
