@@ -3,6 +3,10 @@ package initialize
 import (
 	"chat-server/global"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"os"
+
 	"github.com/elastic/go-elasticsearch/v9"
 	"net/http"
 	"time"
@@ -12,22 +16,32 @@ func InitElasticSearch() error {
 	global.CHAT_LOG.Info("初始化elasticsearch")
 	EsConfig := global.CHAT_CONFIG.ElasticSearch
 
+	// 加载CA证书
+	caCert, err := os.ReadFile(EsConfig.CaFile)
+	if err != nil {
+		global.CHAT_LOG.Error("InitElasticSearch-->无法读取CA证书", "err", err)
+	}
+	// 创建证书池并添加CA证书
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
 	cfg := elasticsearch.Config{
 		Addresses: []string{
 			EsConfig.Address,
 		},
-		APIKey: EsConfig.ApiKey,
-		// 由于是自签名证书或云服务证书，通常需要跳过TLS验证，但在生产环境中不推荐
-		// 或者你可以正确配置CA证书
-		//Transport: &http.Transport{
-		//	TLSClientConfig: &tls.Config{InsecureSkipVerify: EsConfig.InsecureSkipVerify},
-		//},
+		Username: EsConfig.Username,
+		Password: EsConfig.Password,
 		Transport: &http.Transport{
 			MaxIdleConns:          100,              // 保持的最大空闲连接数
 			IdleConnTimeout:       90 * time.Second, // 空闲连接超时时间
 			TLSHandshakeTimeout:   10 * time.Second,
 			ResponseHeaderTimeout: 10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
+
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: EsConfig.InsecureSkipVerify,
+				RootCAs:            caCertPool,
+			},
 		},
 	}
 
