@@ -19,4 +19,5 @@ var (
 	GENERATE_TOKEN_ERROR   = ResponseCode{Code: 406, Msg: "生成token失败"}
 	USER_ID_NOT_FOUND      = ResponseCode{Code: 407, Msg: "用户id不存在"}
 	USER_ACCOUNT_NOT_FOUND = ResponseCode{Code: 408, Msg: "用户账号不存在"}
+	USER_NOT_FOUND         = ResponseCode{Code: 409, Msg: "用户不存在"}
 )

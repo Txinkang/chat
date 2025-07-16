@@ -1,5 +1,5 @@
 {
-  "collMod": "messages",
+  "collMod": "user_messages",
   "validator": {
     "$jsonSchema": {
       "bsonType": "object",
@@ -57,7 +57,7 @@
                   "properties": {
                     "url": { "bsonType": "string" },
                     "name": { "bsonType": "string" },
-                    "size": { "bsonType": "int", "minimum": 0 },
+                    "size": { "bsonType": "int", "minimum": 0 }, 
                     "format": { "bsonType": "string" }
                   },
                   "additionalProperties": false

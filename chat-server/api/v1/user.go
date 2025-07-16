@@ -17,7 +17,7 @@ type UserApi struct{}
 // @Produce      json
 // @Success      200  {object}  common.Response
 // @Router       /user/test [get]
-func (a *UserApi) Test(c *gin.Context) {
+func (userApi *UserApi) Test(c *gin.Context) {
 	var xxx = []int{1, 2, 3}
 	var yyy = map[string]interface{}{
 		"name": "张三",
@@ -39,7 +39,7 @@ func (a *UserApi) Test(c *gin.Context) {
 // @Param        request  body      request.RegisterRequest  true  "用户注册信息"
 // @Success      200      {object}  common.Response
 // @Router       /api/v1/user/register [post]
-func (a *UserApi) Register(c *gin.Context) {
+func (userApi *UserApi) Register(c *gin.Context) {
 	var req user.RegisterRequest
 
 	// 校验参数
@@ -70,7 +70,7 @@ func (a *UserApi) Register(c *gin.Context) {
 // @Param        request  body      request.LoginRequest  true  "用户登录信息"
 // @Success      200      {object}  common.Response
 // @Router       /api/v1/user/login [post]
-func (a *UserApi) LoginAccount(c *gin.Context) {
+func (userApi *UserApi) LoginAccount(c *gin.Context) {
 	var req user.LoginRequest
 
 	// 校验参数

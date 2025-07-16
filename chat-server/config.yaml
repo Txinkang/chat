@@ -40,26 +40,33 @@ elasticsearch:
   insecure_skip_verify: false
   ca_file: "schemas/elasticsearch/http_ca.crt"
 
-
+# 指定数据库配置
 db_schema:
   mysql:
     script_file: "schemas/mysql/chat.sql"
 
   mongodb:
     collections:
-      - name: messages
-        index_file: "schemas/mongo/chat_messages_indexes.json"
-        validator_command_file: "schemas/mongo/chat_messages_validator.json"
+      - name: user_messages
+        index_file: "schemas/mongo/user/user_messages_indexes.json"
+        validator_command_file: "schemas/mongo/user/user_messages_validator.json"
+      - name: system_messages
+        index_file: "schemas/mongo/system/system_messages_indexes.json"
+        validator_command_file: "schemas/mongo/system/system_messages_validator.json"
 
   elasticsearch:
     indices:
-      - name: messages
-        request_file: "schemas/elasticsearch/messages_index_create_request.json"
+      - name: user_messages
+        request_file: "schemas/elasticsearch/user/user_messages_index_create_request.json"
+      - name: system_messages
+        request_file: "schemas/elasticsearch/system/system_messages_index_create_request.json"
 
-
+# 这里配置哪几对数据库需要同步
 mongo_es_sync:
-  - mongo_collection: messages
-    es_index: messages
+  - mongo_collection: user_messages
+    es_index: user_messages
+  - mongo_collection: system_messages
+    es_index: system_messages
 
 logger:
   level: info
@@ -71,7 +78,7 @@ logger:
 # JWT配置
 jwt:
   secret: "chat"  # JWT密钥，生产环境请使用强密钥
-  access_time: 30 # 30分钟
+  access_time: 300 # 30分钟
   refresh_time: 30 # 30天
   user_tokens_time: 30 # 30天
   issuer: "chat-server"           # 签发人

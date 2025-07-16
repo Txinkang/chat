@@ -26,10 +26,10 @@ func GenerateTokenPair(userID string, userAccount string) (*middleware.TokenPair
 		UserID:      userID,
 		UserAccount: userAccount,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(constant.AccessTokenExpireTime)), // 过期时间
-			IssuedAt:  jwt.NewNumericDate(time.Now()),                                     // 签发时间
-			NotBefore: jwt.NewNumericDate(time.Now()),                                     // 生效时间
-			Issuer:    global.CHAT_CONFIG.JWT.Issuer,                                      // 签发人
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * time.Duration(global.CHAT_CONFIG.JWT.AccessTime))), // 过期时间
+			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                                     // 签发时间
+			NotBefore: jwt.NewNumericDate(time.Now()),                                                                     // 生效时间
+			Issuer:    global.CHAT_CONFIG.JWT.Issuer,                                                                      // 签发人
 		},
 	}
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
@@ -44,10 +44,10 @@ func GenerateTokenPair(userID string, userAccount string) (*middleware.TokenPair
 		UserID:  userID,
 		TokenID: tokenID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(constant.RefreshTokenExpireTime)), // 过期时间
-			IssuedAt:  jwt.NewNumericDate(time.Now()),                                      // 签发时间
-			NotBefore: jwt.NewNumericDate(time.Now()),                                      // 生效时间
-			Issuer:    global.CHAT_CONFIG.JWT.Issuer,                                       // 签发人
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * time.Duration(global.CHAT_CONFIG.JWT.RefreshTime))), // 过期时间
+			IssuedAt:  jwt.NewNumericDate(time.Now()),                                                                         // 签发时间
+			NotBefore: jwt.NewNumericDate(time.Now()),                                                                         // 生效时间
+			Issuer:    global.CHAT_CONFIG.JWT.Issuer,                                                                          // 签发人
 		},
 	}
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
@@ -91,8 +91,8 @@ func StoreRefreshToken(userID string, tokenID string, platform string) error {
 	tokenData := map[string]interface{}{
 		"userId":     userID,
 		"tokenId":    tokenID,
-		"expiresAt":  time.Now().Add(constant.RefreshTokenExpireTime).Unix(),
-		"created_at": time.Now().Unix(),
+		"expiresAt":  UnixToUTCMillisTimestamp(time.Now().Add(time.Hour * 24 * time.Duration(global.CHAT_CONFIG.JWT.RefreshTime)).Unix()),
+		"created_at": GetUTCMillisTimestamp(),
 		"platform":   platform,
 	}
 	tokenJson, err := json.Marshal(tokenData)
@@ -104,9 +104,9 @@ func StoreRefreshToken(userID string, tokenID string, platform string) error {
 	pipeline := global.CHAT_REDIS.TxPipeline()
 	userTokenKey := fmt.Sprintf("%s:%s", constant.UserTokensPrefix, userID)
 	// 1、RefreshToken存入redis 2、把RefreshToken的tokenId存储进用户令牌集合
-	pipeline.Set(ctx, tokenKey, tokenJson, constant.RefreshTokenExpireTime)
+	pipeline.Set(ctx, tokenKey, tokenJson, time.Hour*24*time.Duration(global.CHAT_CONFIG.JWT.RefreshTime))
 	pipeline.SAdd(ctx, userTokenKey, tokenID)
-	pipeline.Expire(ctx, userTokenKey, constant.UserTokensExpireTime)
+	pipeline.Expire(ctx, userTokenKey, time.Hour*24*time.Duration(global.CHAT_CONFIG.JWT.UserTokensTime))
 	if _, err := pipeline.Exec(ctx); err != nil {
 		global.CHAT_LOG.Error("存储RefreshToken失败", "err", err.Error())
 		return err

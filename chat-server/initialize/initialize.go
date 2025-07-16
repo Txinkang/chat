@@ -76,6 +76,9 @@ func Initialize(appCtx context.Context, appCancel context.CancelFunc, wg *sync.W
 	// 初始化路由
 	InitRouter()
 
+	// 开启WebSocket
+	StartWebSocketManager(appCtx)
+
 	slog.Info("所有应用程序组件初始化完成。")
 	return nil
 }

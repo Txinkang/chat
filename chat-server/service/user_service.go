@@ -9,8 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -72,8 +70,8 @@ func (s *UserService) RegisterUser(userAccount, password, email, platform string
 		Nickname:    userAccount,
 		Email:       email,
 		Avatar:      "",
-		CreatedAt:   time.Now().Unix(),
-		UpdatedAt:   time.Now().Unix(),
+		CreatedAt:   utils.GetUTCMillisTimestamp(),
+		UpdatedAt:   utils.GetUTCMillisTimestamp(),
 	}
 	err = tx.Create(&user).Error
 	if err != nil {
@@ -162,7 +160,6 @@ func (s *UserService) LoginAccount(userAccount string, password string, platform
 			if err = json.Unmarshal([]byte(refreshTokenData), &tokenData); err != nil {
 				global.CHAT_LOG.Error("LoginAccount-->解析refreshTokenData失败", "err", err)
 				return nil, common.NewServiceError(common.ERROR)
-
 			}
 			// 平台相同则撤销旧令牌
 			getPlatform, ok := tokenData["platform"].(string)
