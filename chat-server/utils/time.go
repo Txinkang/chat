@@ -7,17 +7,14 @@ func GetUTCTimestamp() int64 {
 	return time.Now().UTC().Unix()
 }
 
-// 获取毫秒级UTC时间
 // 获取毫秒级UTC时间戳
 func GetUTCMillisTimestamp() int64 {
 	return time.Now().UTC().UnixNano() / int64(time.Millisecond)
-	U
 }
 
 // 把当前时间转换为UTC时间
 func GetUTCTime(currentTimestamp int64) int64 {
 	return time.Unix(currentTimestamp, 0).UTC().Unix()
-	秒
 }
 
 // 把当前时间转换为毫秒级UTC时间戳
