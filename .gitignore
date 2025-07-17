@@ -1,11 +1,6 @@
-# 忽略所有文件和目录
-*
+assets/
+chat_db/
+chat笔记
 
-# 但不忽略前端项目目录及其内容
-!chat-react/
 
-# 但不忽略后端项目目录及其内容
-!chat-server/
-
-# 也不忽略 .gitignore 文件本身
 !.gitignore
