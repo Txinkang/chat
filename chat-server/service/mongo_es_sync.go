@@ -88,8 +88,8 @@ func (s *MongoToEsSync) StartMongoToEsSync(ctx context.Context, collectionName s
 				slog.Error(fmt.Sprintf("document 到 JSON 失败 (Collection: %s):", collectionName), "err", err)
 				continue
 			}
-			if jsonDocument == nil || len(jsonDocument) == 0 {
-				slog.Error(fmt.Sprintf("JSON 结果为空，跳过写入ES (Collection: %s)。原始 document:", collectionName), document)
+			if len(jsonDocument) == 0 {
+				slog.Error(fmt.Sprintf("JSON 结果为空，跳过写入ES (Collection: %s)。原始 document:", collectionName), "document", document)
 				continue
 			}
 
