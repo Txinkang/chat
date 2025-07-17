@@ -3,5 +3,6 @@ chat_db/
 chat笔记
 .DS_Store
 
+!chat-react/
 !chat-server/
 !.gitignore
